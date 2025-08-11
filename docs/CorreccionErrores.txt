@@ -1,0 +1,5 @@
+En caso de que arroje un error con respecto a que si ya está utilizado el puerto realizar esto en el cmd:
+
+netstat -ano | findstr :numeropuerto
+
+taskkill /PID pidquearrojaloanterior /F
