@@ -37,32 +37,62 @@ class PrincipalSrv:
             self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.serverSocket.bind(("", self.PORT))
             self.serverSocket.listen(5)
-            self.mensajesTxt.insert(tk.END, f"Servidor TCP en ejecución: {socket.gethostname()} ,Puerto {self.PORT}\n")
+            self.mensajesTxt.insert(tk.END, f"Servidor TCP en ejecución: {socket.gethostname()} , Puerto {self.PORT}\n")
             while True:
-                self.clientSocket, addr = self.serverSocket.accept()
-                self.in_buffer = self.clientSocket.makefile('r')
-                self.out = self.clientSocket.makefile('w')
-                threading.Thread(target=self.handleClient).start()
+                client_socket, addr = self.serverSocket.accept()
+                self.mensajesTxt.insert(tk.END, f"Cliente conectado desde {addr}\n")
+                client_thread = threading.Thread(target=self.handleClient, args=(client_socket,))
+                client_thread.start()
         except socket.error as e:
             self.mensajesTxt.insert(tk.END, f"Error en el servidor: {e}\n")
 
-    def handleClient(self):
+
+    def handleClient(self, client_socket):
         try:
+            in_buffer = client_socket.makefile('r')
+            out = client_socket.makefile('w')
+
+            # Leer primer mensaje del cliente con su ID y IP destino
+            init_line = in_buffer.readline().strip()
+            cliente_id = "desconocido"
+            cliente_destino = "?"
+
+            if init_line.startswith("ID:") and ";IP:" in init_line:
+                try:
+                    # Parseo del mensaje: ID:cliente_1;IP:127.0.0.1:12345
+                    id_part, ip_part = init_line.split(";")
+                    cliente_id = id_part.split(":")[1]
+                    ip = ip_part.split(":")[1]
+                    port = ip_part.split(":")[2]
+                    cliente_destino = f"{ip}:{port}"
+                except Exception as e:
+                    print(f"[ERROR] al procesar línea inicial: {e}")
+
+            # Mostrar conexión en el servidor
+            self.root.after(0, self.mensajesTxt.insert, tk.END,
+                            f"Conectado {cliente_id} a {cliente_destino}\n")
+            self.root.after(0, self.mensajesTxt.see, tk.END)
+
+            # Bucle para recibir mensajes del cliente
             while True:
-                linea = self.in_buffer.readline()
+                linea = in_buffer.readline()
                 if not linea:
                     break
-                # Usa after() para actualizar la GUI desde el hilo principal
-                self.root.after(0, self.mensajesTxt.insert, tk.END, f"Cliente: {linea}")
-                self.root.after(0, self.mensajesTxt.see, tk.END)  # Para hacer scroll automático
+                self.root.after(0, self.mensajesTxt.insert, tk.END,
+                                f"{cliente_id}: {linea}")
+                self.root.after(0, self.mensajesTxt.see, tk.END)
 
-                # Respuesta al cliente
-                self.out.write("Mensaje recibido en el server\n")
-                self.out.flush()
-        except socket.error as e:
-            self.root.after(0, self.mensajesTxt.insert, tk.END, f"Error al manejar cliente: {e}\n")
+                out.write("Mensaje recibido en el server\n")
+                out.flush()
+
+        except Exception as e:
+            self.root.after(0, self.mensajesTxt.insert, tk.END,
+                            f"[ERROR] Cliente {cliente_id}: {e}\n")
         finally:
-            self.clientSocket.close()
+            client_socket.close()
+
+
+
 
 
 def main():
