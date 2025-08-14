@@ -4,7 +4,10 @@ import socket
 import threading
 
 class PrincipalCli:
+    cliente_count = 0  #  se crea esta variable de clase para poder crearle a cada usuario su id
     def __init__(self, root):
+        PrincipalCli.cliente_count += 1
+        self.cliente_id = f"cliente_{PrincipalCli.cliente_count}"  # ID único por cliente
         self.root = root
         self.root.title("Cliente")
         self.socket = None
@@ -71,8 +74,14 @@ class PrincipalCli:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((ip, port))
             self.out = self.socket.makefile('w')
-        self.in_buffer = self.socket.makefile('r')
-        threading.Thread(target=self.recibirMensajes, daemon=True).start()
+            self.in_buffer = self.socket.makefile('r')
+
+            # Enviar ID e IP al servidor apenas conecte
+            self.out.write(f"ID:{self.cliente_id};IP:{ip}:{port}\n")
+            self.out.flush()
+
+            threading.Thread(target=self.recibirMensajes, daemon=True).start()
+
 
     def recibirMensajes(self):
         try:
