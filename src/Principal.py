@@ -21,7 +21,12 @@ if __name__ == "__main__":
     cliente_thread_2 = threading.Thread(target=run_cliente)
     cliente_thread_2.start()
 
+    # Iniciar el tercer cliente en otro hilo separado
+    cliente_thread_3 = threading.Thread(target=run_cliente)
+    cliente_thread_3.start()
+
     # Esperar a que todos los hilos terminen
     servidor_thread.join() # cada join impide que el programa se cierre y solo hasta que se terminen todos éste acaba
     cliente_thread_1.join()
     cliente_thread_2.join()
+    cliente_thread_3.join()
